@@ -1,0 +1,40 @@
+--gl_je_lines
+--gl_code_combinations
+--gl_je_headers
+
+SELECT
+
+gljeh.je_source,
+gljeh.je_category,
+gljeh.name,
+gljel.je_line_num,
+gljel.period_name,
+gljel.status,
+gljel.creation_date,
+gljel.created_by,
+gljel.description,
+glcc.segment1,
+glcc.segment2,
+glcc.segment3,
+glcc.segment4,
+glcc.segment5,
+gljel.accounted_dr,
+gljel.accounted_cr,
+gljel.currency_code
+
+FROM gl_je_lines   gljel
+
+LEFT JOIN gl_code_combinations   glcc
+ON gljel.code_combination_id = glcc.code_combination_id
+
+LEFT JOIN gl_je_headers   gljeh
+ON gljel.je_header_id = gljeh.je_header_id
+
+WHERE
+
+gljel.creation_date BETWEEN (SYSDATE - :P_NUMDAYS) AND SYSDATE
+
+ORDER BY
+gljel.creation_date DESC,
+gljeh.name ASC,
+gljel.je_line_num ASC
