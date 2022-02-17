@@ -1,0 +1,21 @@
+SELECT 
+  fal.location_id AS fal_loc_id, 
+  TO_CHAR(
+    fal.last_update_date, 'YYYYMMDD'
+  ) AS fal_updated, 
+  fal.last_updated_by AS fal_updater, 
+  TO_CHAR(fal.creation_date, 'YYYYMMDD') AS fal_created, 
+  fal.created_by AS fal_creator, 
+  fal.segment1 AS fal_segment1, 
+  fal.segment2 AS fal_segment2, 
+  fal.segment3 AS fal_segment3, 
+  fal.segment4 AS fal_segment4, 
+  fal.segment5 AS fal_segment5, 
+  fal.summary_flag AS fal_summary, 
+  fal.enabled_flag AS fal_enabled 
+FROM 
+  fa_locations fal 
+WHERE 
+  fal.enabled_flag = 'Y' 
+order by 
+  fal.segment5 ASC
