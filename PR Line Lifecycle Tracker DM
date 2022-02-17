@@ -1,0 +1,123 @@
+SELECT
+
+porl.line_number AS prln,
+porh.requisition_number AS porh_req_number,
+pol.line_num AS poln,
+poh.segment1 AS poh_number,
+invl.line_number As invln,
+invl.amount AS invl_amount,
+inv.invoice_num AS invh_invoice_num,
+fabuv1.bu_name AS pol_prc_bu,
+fabuv2.bu_name AS pol_req_bu,
+suppliers.party_name AS supplier_name,
+TO_CHAR(porl.creation_date,'YYYY-MM-DD') AS porl_created,
+TO_CHAR(pol.creation_date,'YYYY-MM-DD') AS pol_created,
+TO_CHAR(invl.creation_date,'YYYY-MM-DD') AS invl_created,
+receipts.receipt_num AS rcv_num,
+receipts.rcv_line_num AS rcvln,
+receipts.destination_type_code AS rcv_dest_type,
+TO_CHAR(receipts.rsl_created,'YYYY-MM-DD') AS rsl_created,
+SUBSTR(pol.item_description,0,20) AS pol_item_desc,
+--pol.uom_code,
+blankets.segment1 AS blanket,
+agents.agent_full_name,
+rqstrs.rqstr_full_name,
+itemz.item_number AS pol_item_number,
+stl.ship_to_location_name AS poh_ship_to_loc,
+btl.bill_to_location_name AS poh_bill_to_loc,
+iodv.organization_name AS porl_destination_org
+
+FROM
+por_requisition_lines_all porl
+LEFT JOIN por_requisition_headers_all porh
+ON porl.requisition_header_id = porh.requisition_header_id
+LEFT JOIN po_lines_all pol
+ON porl.po_line_id = pol.po_line_id
+LEFT JOIN po_headers_all poh
+ON pol.po_header_id = poh.po_header_id
+LEFT JOIN ap_invoice_lines_all invl
+ON pol.po_line_id = invl.po_line_id
+LEFT JOIN ap_invoices_all inv
+ON invl.invoice_id = inv.invoice_id
+LEFT JOIN (SELECT bu_id,bu_name FROM fun_all_business_units_v fabuv)
+fabuv1
+ON pol.prc_bu_id = fabuv1.bu_id
+LEFT JOIN (SELECT bu_id,bu_name FROM fun_all_business_units_v fabuv)
+fabuv2
+ON pol.req_bu_id = fabuv2.bu_id
+LEFT JOIN (SELECT ps.vendor_id AS vendor_id, ps.party_id AS pspartyid,
+hzp.party_id AS hzpartyid, hzp.party_name AS party_name
+FROM poz_suppliers ps left join hz_parties hzp on ps.party_id = hzp.party_id)
+suppliers
+ON poh.vendor_id = suppliers.vendor_id
+
+LEFT JOIN 
+(SELECT
+rsh.receipt_num,
+rsl.line_num AS rcv_line_num,
+rsl.quantity_received AS ,
+rsl.destination_type_code,
+rsl.po_line_id AS rsl_po_line_id,
+rsl.creation_date AS rsl_created
+FROM
+rcv_shipment_lines rsl LEFT JOIN rcv_shipment_headers rsh
+ON rsl.shipment_header_id = rsh.shipment_header_id
+WHERE rsl.destination_type_code IN ('INVENTORY','EXPENSE'))
+receipts
+ON pol.po_line_id = receipts.rsl_po_line_id
+
+LEFT JOIN
+(SELECT poh.po_header_id,
+poh.segment1
+from po_headers_all poh
+WHERE TYPE_LOOKUP_CODE = 'BLANKET')
+blankets
+ON porl.source_doc_header_id = blankets.po_header_id
+
+LEFT JOIN
+(SELECT
+person_id AS agent_person_id,
+full_name AS agent_full_name
+FROM per_person_names_f_v)
+agents
+ON poh.agent_id = agents.agent_person_id
+
+LEFT JOIN
+(SELECT
+person_id AS rqstr_person_id,
+full_name AS rqstr_full_name
+FROM per_person_names_f_v)
+rqstrs
+ON porl.requester_id = rqstrs.rqstr_person_id
+
+LEFT JOIN
+(SELECT DISTINCT
+egpiv.inventory_item_id As item_id,
+egpiv.inventory_item_status_code AS item_status,
+egpiv.item_number AS item_number,
+egpiv.description AS item_descript
+FROM egp_system_items_v   egpiv)
+itemz
+ON pol.item_id = itemz.item_id
+
+LEFT JOIN
+(SELECT
+pldfvl.location_id AS ship_to_location_id,
+pldfvl.location_name AS ship_to_location_name
+FROM per_location_details_f_vl pldfvl
+where pldfvl.location_name NOT IN 'Philadelphia-626') stl
+ON poh.ship_to_location_id = stl.ship_to_location_id
+
+LEFT JOIN
+(SELECT
+pldfvl.location_id AS bill_to_location_id,
+pldfvl.location_name AS bill_to_location_name
+FROM per_location_details_f_vl pldfvl) btl
+ON poh.bill_to_location_id = btl.bill_to_location_id
+
+LEFT JOIN
+inv_organization_definitions_v iodv
+ON porl.destination_organization_id = iodv.organization_id
+
+ORDER BY porl.creation_date DESC
+FETCH FIRST 400 ROWS ONLY
