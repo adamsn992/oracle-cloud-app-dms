@@ -1,0 +1,204 @@
+SELECT
+/*glb.ledger_id,
+glb.code_combination_id,
+glb.actual_flag,
+TO_CHAR(glb.last_update_date,'YYYY-MM-DD') as last_update_date,
+glb.last_updated_by,
+(glb.begin_balance_dr + glb.period_net_dr) AS ytd_bal_dr,
+(glb.begin_balance_cr + glb.period_net_cr) AS ytd_bal_cr,
+*/
+
+glb.period_name AS   glb_period,
+glb.currency_code AS   glb_currency,
+(glb.period_year||'-'||glb.period_num) AS   glb_pd_yr_mo,
+(glb.begin_balance_dr - glb.begin_balance_cr) AS   glb_begin_bal_net,
+glb.period_net_dr AS glb_activity_dr,
+glb.period_net_cr AS   glb_activity_cr,
+(glb.begin_balance_dr + glb.period_net_dr - glb.begin_balance_cr - glb.period_net_cr)
+AS   glb_end_bal_net,
+glcc.gl_concat AS   glb_glcc_concat,
+ledg.name AS   glb_ledger
+
+FROM
+gl_balances   glb
+
+LEFT JOIN
+(SELECT
+glcc.code_combination_id,
+glcc.detail_posting_allowed_flag,
+glcc.account_type,
+glcc.enabled_flag,
+glcc.segment1,glcc.segment2,
+glcc.segment3,glcc.segment4,
+glcc.segment5,glcc.segment6,
+glcc.segment7,glcc.segment8,
+glcc.segment9,glcc.segment10,
+(glcc.segment1
+||'.'||glcc.segment2||'.'||glcc.segment3||'.'||glcc.segment4
+||'.'||glcc.segment5||'.'||glcc.segment6||'.'||glcc.segment7||'.'
+||glcc.segment8||'.'||glcc.segment9||'.'||glcc.segment10) AS gl_concat
+FROM
+gl_code_combinations glcc)   glcc
+ON glb.code_combination_id = glcc.code_combination_id
+
+LEFT JOIN
+(SELECT DISTINCT
+ledg.ledger_id,
+ledg.name
+FROM gl_ledgers ledg)
+ledg
+ON glb.ledger_id = ledg.ledger_id
+
+WHERE
+(glb.period_name = NVL(:pd, glb.period_name) AND
+glcc.segment1 = NVL(:s1,glcc.segment1) AND
+glcc.segment2 = NVL(:s2,glcc.segment2) AND
+glcc.segment3 = NVL(:s3,glcc.segment3) AND
+glcc.segment4 = NVL(:s4,glcc.segment4) AND
+glcc.segment5 = NVL(:s5,glcc.segment5) AND
+glcc.segment6 = NVL(:s6,glcc.segment6) AND
+glcc.segment7 = NVL(:s7,glcc.segment7) AND
+glcc.segment8 = NVL(:s8,glcc.segment8) AND
+glcc.segment9 = NVL(:s9,glcc.segment9) AND
+glcc.segment10 = NVL(:s10,glcc.segment10))
+
+AND (((glb.begin_balance_dr - glb.begin_balance_cr) + glb.period_net_dr + glb.period_net_cr + (glb.begin_balance_dr + glb.period_net_dr - glb.begin_balance_cr + glb.period_net_cr)) != 0)
+AND glcc.segment3 NOT LIKE '9%'
+
+ORDER BY
+period_year DESC,
+period_num DESC,
+gl_concat ASC
+
+
+
+
+
+
+SELECT
+/*  jeh.je_batch_id AS jeh_batch_id,
+jeh.je_header_id AS jeh_head_id,
+jel.je_header_id AS jel_head_id,
+jel.code_combination_id AS jel_code_id,
+jeb.je_batch_id AS jeb_batch_id,  */
+TO_CHAR(jeb.creation_date,'YYYY/MM/DD') AS jeb_created,
+jeb.status AS      jeb_status,
+jel.je_line_num AS jel_line,
+jel.period_name AS jel_periodname,
+jeb.name AS jeb_name,
+NVL(jel.accounted_dr, 0) AS jel_acc_dr,
+NVL(jel.accounted_cr, 0) AS jel_acc_cr,
+jel.currency_code AS jel_currency,
+jeh.je_source AS jeh_source,
+jeh.je_category AS jeh_category,
+jeh.name AS jeh_name,
+TO_CHAR(jeh.posted_date,'YYYY/MM/DD') AS jeh_posted,
+glcc.gl_concat AS glcc_concat
+
+FROM   gl_je_lines     jel
+LEFT JOIN gl_je_headers   jeh
+ON jel.je_header_id =     jeh.je_header_id
+	LEFT JOIN gl_je_batches   jeb
+	ON jeh.je_batch_id =      jeb.je_batch_id
+		LEFT JOIN 
+		(SELECT
+		glcc.code_combination_id,
+		glcc.detail_posting_allowed_flag,
+		glcc.account_type,
+		glcc.enabled_flag,
+		glcc.segment1,glcc.segment2,
+		glcc.segment3,glcc.segment4,
+		glcc.segment5,glcc.segment6,
+		glcc.segment7,glcc.segment8,
+		glcc.segment9,glcc.segment10,
+		(glcc.segment1
+		||'.'||glcc.segment2||'.'||glcc.segment3||'.'||glcc.segment4
+		||'.'||glcc.segment5||'.'||glcc.segment6||'.'||glcc.segment7||'.'
+		||glcc.segment8||'.'||glcc.segment9||'.'||glcc.segment10) AS gl_concat
+			FROM
+			gl_code_combinations glcc)   glcc
+		ON jel.code_combination_id = glcc.code_combination_id
+
+WHERE
+jel.period_name = NVL(:pd, jel.period_name)
+AND glcc.segment1 = NVL(:s1,glcc.segment1)
+AND glcc.segment2 = NVL(:s2,glcc.segment2)
+AND glcc.segment3 = NVL(:s3,glcc.segment3)
+AND glcc.segment4 = NVL(:s4,glcc.segment4)
+AND glcc.segment5 = NVL(:s5,glcc.segment5)
+AND glcc.segment6 = NVL(:s6,glcc.segment6)
+AND glcc.segment7 = NVL(:s7,glcc.segment7)
+AND glcc.segment8 = NVL(:s8,glcc.segment8)
+AND glcc.segment9 = NVL(:s9,glcc.segment9)
+AND glcc.segment10 = NVL(:s10,glcc.segment10)
+
+
+ORDER BY
+jeb_created  DESC NULLS FIRST,
+jeb_name ASC,
+jeh_name ASC,
+jel_line     ASC
+
+
+
+SELECT DISTINCT
+
+glcc.code_combination_id,
+
+(glcc.segment1
+		||'.'||glcc.segment2||'.'||glcc.segment3||'.'||glcc.segment4
+		||'.'||glcc.segment5||'.'||glcc.segment6||'.'||glcc.segment7||'.'
+		||glcc.segment8||'.'||glcc.segment9||'.'||glcc.segment10) AS gl_concat,
+seg1d.le_desc,
+seg2d.loc_desc,
+seg3d.acct_desc,
+seg4d.dept_desc,
+seg5d.ther_desc
+FROM gl_code_combinations glcc
+LEFT JOIN
+	(SELECT ffvl.description AS le_desc, ffv.flex_value AS ffv_value
+	FROM fnd_flex_values_tl ffvl, fnd_flex_values ffv,
+	fnd_flex_value_sets ffvs, gl_code_combinations glcc
+	WHERE ffvl.flex_value_id = ffv.flex_value_id
+	AND ffv.flex_value_set_id = ffvs.flex_value_set_id
+	AND ffv.flex_value = glcc.segment1
+	AND ffvs.flex_value_set_name = 'GL_COA_LE')   seg1d
+	ON glcc.segment1=seg1d.ffv_value
+LEFT JOIN
+	(SELECT ffvl.description AS loc_desc, ffv.flex_value AS ffv_value
+	FROM fnd_flex_values_tl ffvl, fnd_flex_values ffv,
+	fnd_flex_value_sets ffvs, gl_code_combinations glcc
+	WHERE ffvl.flex_value_id = ffv.flex_value_id
+	AND ffv.flex_value_set_id = ffvs.flex_value_set_id
+	AND ffv.flex_value = glcc.segment2
+	AND ffvs.flex_value_set_name = 'GL_COA_LOCATION')   seg2d
+	ON glcc.segment2=seg2d.ffv_value
+LEFT JOIN
+	(SELECT ffvl.description AS acct_desc, ffv.flex_value AS ffv_value
+	FROM fnd_flex_values_tl ffvl, fnd_flex_values ffv,
+	fnd_flex_value_sets ffvs, gl_code_combinations glcc
+	WHERE ffvl.flex_value_id = ffv.flex_value_id
+	AND ffv.flex_value_set_id = ffvs.flex_value_set_id
+	AND ffv.flex_value = glcc.segment3
+	AND ffvs.flex_value_set_name = 'GL_COA_ACCOUNT')   seg3d
+	ON glcc.segment3=seg3d.ffv_value
+LEFT JOIN
+	(SELECT ffvl.description AS dept_desc, ffv.flex_value AS ffv_value
+	FROM fnd_flex_values_tl ffvl, fnd_flex_values ffv,
+	fnd_flex_value_sets ffvs, gl_code_combinations glcc
+	WHERE ffvl.flex_value_id = ffv.flex_value_id
+	AND ffv.flex_value_set_id = ffvs.flex_value_set_id
+	AND ffv.flex_value = glcc.segment4
+	AND ffvs.flex_value_set_name = 'GL_COA_DEPT')   seg4d
+	ON glcc.segment4=seg4d.ffv_value	
+LEFT JOIN
+	(SELECT ffvl.description AS ther_desc, ffv.flex_value AS ffv_value
+	FROM fnd_flex_values_tl ffvl, fnd_flex_values ffv,
+	fnd_flex_value_sets ffvs, gl_code_combinations glcc
+	WHERE ffvl.flex_value_id = ffv.flex_value_id
+	AND ffv.flex_value_set_id = ffvs.flex_value_set_id
+	AND ffv.flex_value = glcc.segment5
+	AND ffvs.flex_value_set_name = 'GL_COA_THERAPY')   seg5d
+	ON glcc.segment5=seg5d.ffv_value
+
+ORDER BY 1 ASC
