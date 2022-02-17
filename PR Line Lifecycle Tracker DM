@@ -104,8 +104,7 @@ LEFT JOIN
 (SELECT
 pldfvl.location_id AS ship_to_location_id,
 pldfvl.location_name AS ship_to_location_name
-FROM per_location_details_f_vl pldfvl
-where pldfvl.location_name NOT IN 'Philadelphia-626') stl
+FROM per_location_details_f_vl pldfvl) stl
 ON poh.ship_to_location_id = stl.ship_to_location_id
 
 LEFT JOIN
