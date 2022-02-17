@@ -1,0 +1,51 @@
+SELECT DISTINCT
+	--pldfvl.location_details_id,
+	--pldfvl.inventory_organization_id AS pldfvl_invorglink,
+	--pldfvl.main_address_id AS   pldfvl_mainaddresslink,
+	--pldfvl.object_version_number AS   pldfvl_ovn,
+	TO_CHAR(pldfvl.effective_start_date,'YYYY-MM-DD') AS   pldfvl_effstart,
+	TO_CHAR(pldfvl.effective_end_date,'YYYY-MM-DD') AS   pldfvl_effend,
+	pldfvl.active_status AS   pldfvl_active,
+	pldfvl.location_code AS   pldfvl_loc_code,
+	pldfvl.location_name AS   pldfvl_loc_name,
+	pldfvl.ship_to_site_flag AS ship_to_site,
+	pldfvl.receiving_site_flag AS   receiving_site,
+	pldfvl.bill_to_site_flag AS   bill_to_site,
+	pldfvl.office_site_flag AS   office_site,
+	pldfvl.attribute1 AS   pldfvl_location_type,
+	SUBSTR(pldfvl.created_by,0,8) AS   pldfvl_creator,
+	TO_CHAR(pldfvl.creation_date,'YYYY-MM-DD HH:MI') AS   pldfvl_created,
+	SUBSTR(pldfvl.last_updated_by,0,8) AS   pldfvl_updater,
+	TO_CHAR(pldfvl.last_update_date,'YYYY-MM-DD HH:MI') AS   pldfvl_updated,
+	iopv.organization_code AS   inventory_org_code,
+	(pafsub.address_line_1||' '||
+	pafsub.address_line_2) AS address_line_1_2,
+	pafsub.town_or_city, 
+	pafsub.region_2,
+	pafsub.postal_code
+	
+FROM
+	per_location_details_f_vl   pldfvl
+	
+LEFT JOIN
+		(SELECT DISTINCT organization_id, organization_code
+		FROM inv_org_parameters_v)   iopv
+ON pldfvl.inventory_organization_id = iopv.organization_id
+
+LEFT JOIN
+	(SELECT paf.address_id, paf.address_line_1, paf.address_line_2,
+	paf.town_or_city, paf.region_2, paf.postal_code, paf.object_version_number
+	FROM
+		per_addresses_f		paf
+		WHERE paf.address_id IN   (SELECT DISTINCT
+		address_id FROM   per_loc_address_usages_f)) pafsub
+ON pldfvl.main_address_id = pafsub.address_id
+
+WHERE
+	pldfvl.effective_start_date IN
+	(SELECT MAX(pldfvl2.effective_start_date)
+		FROM per_location_details_f_vl   pldfvl2
+		WHERE pldfvl.location_details_id = pldfvl2.location_details_id)
+
+ORDER BY
+	pldfvl_created DESC
