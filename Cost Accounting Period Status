@@ -1,0 +1,32 @@
+SELECT 
+  --cps.cost_org_id AS cps_org_id,
+  --cps.cost_book_id AS cps_book_id,
+  cps.period_name, 
+  DECODE(
+    cps.status_code, 'N', 'Never Opened', 
+    'C', 'Closed', 'O', 'Open'
+  ) AS cps_status_translate, 
+  cps.created_by, 
+  TO_CHAR(cps.creation_date, 'YYYY-MM-DD') AS cps_creation_date, 
+  cps.last_updated_by, 
+  TO_CHAR(
+    cps.last_update_date, 'YYYY-MM-DD'
+  ) AS cps_updated_date, 
+  cps.period_set_name, 
+  cps.period_type, 
+  cps.period_num, 
+  cps.period_year, 
+  TO_CHAR(cps.start_date, 'YYYY-MM-DD') AS periodstartdate, 
+  TO_CHAR(cps.end_date, 'YYYY-MM-DD') AS periodenddate, 
+  cov.cost_org_name AS cov_org_name, 
+  cbb.cost_book_code AS cbb_book_code 
+FROM 
+  CST_PERIOD_STATUSES cps 
+  LEFT JOIN CST_COST_ORGS_V cov ON cps.cost_org_id = cov.cost_org_id 
+  LEFT JOIN CST_COST_BOOKS_B cbb ON cps.cost_book_id = cbb.cost_book_id 
+WHERE 
+  NVL(cps.period_year, '') = : P_year 
+ORDER BY 
+  cps.period_year DESC, 
+  cps.period_num DESC, 
+  cov.cost_org_name ASC
